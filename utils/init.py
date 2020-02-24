@@ -3,7 +3,7 @@ def init_net(net, init_type='normal'):
     init_weights(net, init_type)
     return net
 
-def init_weights(net, init_type='normal', gain=0.02):
+def init_weights(net: object, init_type: object = 'normal', gain: object = 0.02) -> object:
     def init_func(m):
         # this will apply to each layer
         classname = m.__class__.__name__

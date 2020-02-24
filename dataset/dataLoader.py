@@ -10,7 +10,6 @@ from PIL import Image
 from configurations.paths import paths, file_names
 import os
 import pickle
-from configurations.modelConfig import params, num_classes
 from random import shuffle
 import pandas as pd
 from dataset.splitDataset import getIndicesTrainValidTest
@@ -70,7 +69,7 @@ class HDF5loader():
 		return self.cls_weights
 
 
-def dataLoader(hdf5_file, train_indices, valid_indices, test_indices, num_workers,  trans=None):
+def dataLoader(hdf5_file, train_indices, valid_indices, test_indices, num_workers, batch_size, trans=None):
 
 	pin_memory = True
 
@@ -81,7 +80,7 @@ def dataLoader(hdf5_file, train_indices, valid_indices, test_indices, num_worker
 	data = HDF5loader(hdf5_file, trans, train_indices=train_indices)
 	cls_weights = data.get_cls_weights()
 
-	train_loader = DataLoader(data, batch_size=params['train']['batch_size'], sampler=train_sampler,
+	train_loader = DataLoader(data, batch_size=batch_size, sampler=train_sampler,
 							  num_workers=num_workers, pin_memory=pin_memory)
 	valid_loader = DataLoader(data, batch_size=1, sampler=valid_sampler,
 							  num_workers=num_workers, pin_memory=pin_memory)

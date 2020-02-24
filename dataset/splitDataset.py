@@ -18,7 +18,7 @@ def getTrainValidTestSplit(label_file, id_file, shuffle, random_seed, train_size
     print(len(id_keys))
 
     if shuffle:
-        #np.random.seed(random_seed)
+        np.random.seed(random_seed)
         np.random.shuffle(id_keys)
 
     # Split RID into train:valid:test in 60:20:20 ratio
