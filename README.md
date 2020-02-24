@@ -20,4 +20,6 @@ run python patientmapping.py
 Splite data into train, validation and test (resulting train_data_indices.pkl (train images indices) valid_data_indices.pkl (validation images indices) test_data_indices.pkl (test images indices): 
 run python splitDataset.py 
 
+For training and validating 
+run -> run.sh 
 
