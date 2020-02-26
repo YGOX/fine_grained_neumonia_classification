@@ -127,7 +127,7 @@ def main():
     shuffle(valid_indices)
     shuffle(test_indices)
     train_loader, valid_loader, test_loader, cls_weights = \
-        dataLoader(dataroot, train_indices, valid_indices, test_indices, args.workers, batch_size=args.gpu, trans=True)
+        dataLoader(dataroot, train_indices, valid_indices, test_indices, args.workers, batch_size=args.train_batchsize_per_gpu, trans=True)
     #traindir = os.path.join(dataroot, 'train')
     #testdir = os.path.join(dataroot, 'test')
 

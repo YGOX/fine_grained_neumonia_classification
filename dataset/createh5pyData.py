@@ -34,7 +34,7 @@ for idx, row in labels_df.iterrows():
         num_slices= 0
         #select axial slices in hthe middle, dump the first 50 and the last 50
         for i in np.arange(50, img.shape[1]-50,1):
-            res = cv2.resize(img[0,:,i,:], dsize=(448, 448))
+            res = cv2.resize(img[0,i,:,:], dsize=(448, 448))
             axial_slices.append(np.expand_dims(res, axis=0))
             PID.append(row['id'])
             Plabel.append(label)
