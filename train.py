@@ -10,6 +10,7 @@ from utils.save import *
 from torchvision import datasets, transforms, utils
 import torchvision.models as models
 import numpy as np
+from tqdm import tqdm
 
 def train(args, train_loader, model, criterion, optimizer, epoch):
     batch_time = AverageMeter()
@@ -26,7 +27,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch):
     # switch to train mode
     model.train()
 
-    for i, (data, target) in enumerate(train_loader):
+    for i, (data, target) in tqdm(enumerate(train_loader), desc=f'epoch:{epoch:02}', total=len(train_loader)):
         if args.gpu is not None:
             data = data.cuda()
             target = target.cuda()

@@ -23,7 +23,7 @@ import torch.utils.data.distributed
 import torchvision.transforms as transforms
 from random import shuffle
 import torchvision.datasets as datasets
-from utils.MyImageFolderWithPaths import ImageFolderWithPaths
+#from utils.MyImageFolderWithPaths import ImageFolderWithPaths
 from PIL import Image, ImageFont, ImageDraw
 import os
 import re

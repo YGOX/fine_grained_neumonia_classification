@@ -6,12 +6,13 @@ import time
 		
 paths = {
 	'data' : {
-		'datapath': 	'/home/scat5837/baidunetdiskdownload/stage1',
-		'preprocess_result_path':'/home/scat5837/PycharmProjects/wuhan/prep_result/',
-		'preprocessed_data':'/home/scat5837/PycharmProjects/DFL-CNN/prep_result/*.npy',
-		'datainfo_path':'/home/scat5837/PycharmProjects/DFL-CNN/data_info/'},
+		'datapath': 	'/share/data/Kaggle/stage1',
+		'preprocess_result_path':'./prep_result/',
+		'preprocessed_data':'./prep_result/*.npy',
+		'preprocessed_data_label':'./prep_label/*label.npy',
+		'datainfo_path':'./data_info/'},
 	'output'	:	{		
-		'bl_base_folder'							:	'/home/scat5837/PycharmProjects/wuhan/bl_outputs/'
+		'bl_base_folder'							:	'./bl_outputs/'
 	}
 }
 

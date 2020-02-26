@@ -52,12 +52,12 @@ hdf5_file = h5py.File(hdf5_path, mode='w')
 
 data_shape4 = images.shape
 asciiList = [n.encode("ascii", "ignore") for n in ids.tolist()]
-hdf5_file.create_dataset("ID", (len(asciiList),),dtype='S10')
-hdf5_file.create_dataset("Image", images.shape, np.float32)
-hdf5_file.create_dataset("Label", (labels.shape[0],), dtype=np.uint8)
+# hdf5_file.create_dataset("id", (len(asciiList),),dtype='S10')
+# hdf5_file.create_dataset("image", images.shape, np.float32)
+# hdf5_file.create_dataset("label", (labels.shape[0],), dtype=np.uint8)
 
 hdf5_file["image"] = images
 hdf5_file["label"] = labels
-hdf5_file["iD"]= asciiList
+hdf5_file["id"] = asciiList
 hdf5_file.close()
 

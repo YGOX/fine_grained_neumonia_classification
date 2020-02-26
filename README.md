@@ -12,13 +12,13 @@ Data Proprecessing:
 run python prep.py-> resulting a folder 'prep_result1' including patient CT array:*****_clean.npy, Patient specific Lung Segmentation Mask: *****_label.npy.
 
 Sampling Axial slices and put patient ID, disease label into a h5py file (resulting a h5py file named data.hdf5) :
-run python createh5pyData.py 
+run python dataset/createh5pyData.py 
 
 Generate Patient Specific Index (resulting a pickle file named IDtodict.pkl): 
-run python patientmapping.py 
+run python dataset/patientmapping.py 
 
 Splite data into train, validation and test (resulting train_data_indices.pkl (train images indices) valid_data_indices.pkl (validation images indices) test_data_indices.pkl (test images indices): 
-run python splitDataset.py 
+run python dataset/splitDataset.py 
 
 For training and validating 
 run -> run.sh 

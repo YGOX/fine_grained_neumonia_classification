@@ -14,7 +14,7 @@ def getTrainValidTestSplit(label_file, id_file, shuffle, random_seed, train_size
     f = h5py.File(label_file, 'r',  libver='latest')
     pid = pickle.load(open(id_file, 'rb'))
     # Find the set of RID (patients)
-    id_keys = list(set(f['iD']))
+    id_keys = list(set(f['id']))
     print(len(id_keys))
 
     if shuffle:
@@ -84,7 +84,7 @@ def getTrainValidTestSplit1(label_file, id_file, shuffle, random_seed, train_siz
     f = h5py.File(label_file, 'r',  libver='latest')
     pid = pickle.load(open(id_file, 'rb'))
     # Find the set of RID (patients)
-    id_keys = list(set(f['iD']))
+    id_keys = list(set(f['id']))
     print(len(id_keys))
 
     if shuffle:

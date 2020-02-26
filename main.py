@@ -25,7 +25,7 @@ import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-from utils.MyImageFolderWithPaths import *
+#from utils.MyImageFolderWithPaths import *
 from drawrect import *
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
@@ -127,7 +127,7 @@ def main():
     shuffle(valid_indices)
     shuffle(test_indices)
     train_loader, valid_loader, test_loader, cls_weights = \
-        dataLoader(dataroot, train_indices, valid_indices, test_indices, args.workers, trans=True)
+        dataLoader(dataroot, train_indices, valid_indices, test_indices, args.workers, batch_size=args.gpu, trans=True)
     #traindir = os.path.join(dataroot, 'train')
     #testdir = os.path.join(dataroot, 'test')
 
