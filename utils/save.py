@@ -58,7 +58,7 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
         filename {str} -- [description] (default: {'checkpoint.pth.tar'})
     """
     root_dir = get_root_dir()
-    weight_dir = os.path.join(root_dir, 'weight')
+    weight_dir = os.path.join(root_dir, 'output', 'weight')
     if not os.path.exists(weight_dir):
         os.mkdir(weight_dir)
     

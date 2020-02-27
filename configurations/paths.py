@@ -6,13 +6,13 @@ import time
 		
 paths = {
 	'data' : {
-		'datapath': 	'/share/data/Kaggle/stage1',
-		'preprocess_result_path':'./prep_result/',
-		'preprocessed_data':'./prep_result/*.npy',
-		'preprocessed_data_label':'./prep_label/*label.npy',
+		'datapath': 	'./input/stage1',
+		'preprocess_result_path':'./output/prep_result/',
+		'preprocessed_data':'./output/prep_result/*.npy',
+		'preprocessed_data_label':'./output/prep_label/*label.npy',
 		'datainfo_path':'./data_info/'},
 	'output'	:	{		
-		'bl_base_folder'							:	'./bl_outputs/'
+		'bl_base_folder'							:	'./output/bl_outputs/'
 	}
 }
 
