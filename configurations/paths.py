@@ -6,11 +6,11 @@ import time
 		
 paths = {
 	'data' : {
-		'datapath': 	'/share/data/Kaggle/stage1',
-		'preprocess_result_path':'./prep_result/',
-		'preprocessed_data':'./prep_result/*.npy',
+		'datapath': 	'/home/scat5837/baidunetdiskdownload/COVID19',
+		'preprocess_result_path':'./prep_result1/',
+		'preprocessed_data':'/home/scat5837/PycharmProjects/DFL-CNN/prep_result/*.npy',
 		'preprocessed_data_label':'./prep_label/*label.npy',
-		'datainfo_path':'./data_info/'},
+		'datainfo_path':'/home/scat5837/Documents/Fine-grained Neumonia Classification/data_info'},
 	'output'	:	{		
 		'bl_base_folder'							:	'./bl_outputs/'
 	}
