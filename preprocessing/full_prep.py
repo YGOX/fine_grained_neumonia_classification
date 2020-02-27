@@ -94,13 +94,13 @@ def savenpy(id,filelist,prep_folder,data_path,use_existing=True):
         sliceim = sliceim*dilatedMask+pad_value*(1-dilatedMask).astype('uint8')
         bones = sliceim*extramask>bone_thresh
         sliceim[bones] = pad_value
-        sliceim1,_ = resample(sliceim,spacing,resolution,order=1)
-        sliceim2 = sliceim1[extendbox[0,0]:extendbox[0,1],
-                    extendbox[1,0]:extendbox[1,1],
-                    extendbox[2,0]:extendbox[2,1]]
-        sliceim = sliceim2[np.newaxis,...]
+        #sliceim1,_ = resample(sliceim,spacing,resolution,order=1)
+        #sliceim2 = sliceim1[extendbox[0,0]:extendbox[0,1],
+        #           extendbox[1,0]:extendbox[1,1],
+        #            extendbox[2,0]:extendbox[2,1]]
+        #sliceim = sliceim2[np.newaxis,...]
         np.save(os.path.join(prep_folder,name+'_clean'), sliceim)
-        #np.save(os.path.join(prep_folder,name+'_label'), Mask)
+        np.save(os.path.join(prep_folder,name+'_label'), Mask)
     except:
         print('bug in '+name)
         raise

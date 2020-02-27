@@ -145,7 +145,7 @@ def draw_patch(epoch, model, index2classlist, args, dataroot, selected_ind):
     result = os.path.abspath(args.result)
     if not os.path.isdir(result):
         os.mkdir(result)
-
+    model.eval()
     f = h5py.File(dataroot, 'r', libver='latest')
     img_f = f['image']
     imgs= img_f[selected_ind]
@@ -169,8 +169,10 @@ def draw_patch(epoch, model, index2classlist, args, dataroot, selected_ind):
         #img_pad = transform2(img)
        # img_tensor = transform1(img)
         #img_tensor = data.unsqueeze(0)
-        out1, out2, out3, indices = model(transform2(img).unsqueeze(0))
-        out = out1 + out2 + 0.1 *out3
+        #out1, out2, out3, indices = model(transform2(img).unsqueeze(0))
+        out1, out2, indices = model(transform2(img).unsqueeze(0))
+        #out = out1 + out2 + 0.1 *out3
+        out = out1 + out2
         #img = transform1(img)
     
         value, index = torch.max(out.cpu(), 1)

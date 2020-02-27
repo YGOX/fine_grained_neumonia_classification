@@ -56,8 +56,10 @@ def validate_simple(args, val_loader, model, criterion, epoch):
         # compute output
         for idx, d in enumerate(data):      # data [batchsize, 10_crop, 3, 448, 448]
             d = d.unsqueeze(0) # d [1, 3, 448, 448]
-            output1, output2, output3, _ = model(d)
-            output = output1 + output2 + 0.1 * output3
+            #output1, output2, output3, _ = model(d)
+            output1, output2, _ = model(d)
+            #output = output1 + output2 + 0.1 * output3
+            output = output1 + output2
 
             # measure accuracy and record loss
             prec = accuracy_single(output, target)

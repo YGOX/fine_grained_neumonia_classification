@@ -11,7 +11,7 @@ class Log(object):
         loss = losses[0]
         loss1 = losses[1]
         loss2 = losses[2]
-        loss3 = losses[3]
+        #loss3 = losses[3]
         root_dir = os.path.abspath('./')
         log_dir = os.path.join(root_dir, 'log') 
         if not os.path.exists(log_dir):
@@ -26,8 +26,7 @@ class Log(object):
                     'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                     'Loss1 {loss1.val:.4f} ({loss1.avg:.4f})\t'
                     'Loss2 {loss2.val:.4f} ({loss2.avg:.4f})\t'
-                    'Loss3 {loss3.val:.4f} ({loss3.avg:.4f})\n'
-                    'Accuracy({acc.avg:.3f})\n'.format(epoch, batch, maxbatch,loss = loss,loss1 = loss1,loss2 = loss2, loss3=loss3,  acc=acc))
+                    'Accuracy({acc.avg:.3f})\n'.format(epoch, batch, maxbatch,loss = loss,loss1 = loss1,loss2 = loss2,  acc=acc))
 
     
     def save_test_info(self, epoch, acc):

@@ -58,11 +58,11 @@ class DFL_VGG16(nn.Module):
 		out2 = out2.view(batchsize, -1)
 		
 		# Side-branch
-		inter6 = inter6.view(batchsize, -1, self.k * self.nclass)
-		out3 = self.cross_channel_pool(inter6)
-		out3 = out3.view(batchsize, -1)
+		#inter6 = inter6.view(batchsize, -1, self.k * self.nclass)
+		#out3 = self.cross_channel_pool(inter6)
+		#out3 = out3.view(batchsize, -1)
 	
-		return out1, out2, out3, indices
+		return out1, out2, indices
 
 if __name__ == '__main__':
 	input_test = torch.ones(10,3,448,448)
