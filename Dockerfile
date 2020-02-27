@@ -1,6 +1,6 @@
-#FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
+FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
 #FROM  nvidia/cuda:9.0-base-ubuntu16.04
-FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
+#FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
 # FROM nvidia/cuda:10.1-cudnn7-runtime-ubuntu16.04
 # FROM  nvidia/cuda:10.1-devel-ubuntu16.04
 # FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
