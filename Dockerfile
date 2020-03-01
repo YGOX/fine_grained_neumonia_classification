@@ -20,7 +20,7 @@ RUN set -ex \
     && apt-get install git-lfs \
     && git lfs install \
     && apt-get clean \
-    && /opt/miniconda/bin/conda install conda=4.8.1=py37_0 \
+    && /opt/miniconda/bin/conda install conda=4.8.1=py37_4 \
     && /opt/miniconda/bin/conda clean -yq -a \
     && rm Miniconda3-4.7.12.1-Linux-x86_64.sh \
     && rm -rf \
@@ -47,4 +47,4 @@ USER root
 WORKDIR /app
 
 EXPOSE 8888
-ENTRYPOINT ["jupyter", "notebook", "--allow-root"]
+ENTRYPOINT ["bash"]

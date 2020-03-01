@@ -7,8 +7,9 @@ import time
 paths = {
 	'data' : {
 		'datapath': 	'./input/stage1',
-		'preprocess_result_path':'./output/prep_result/',
+		'preprocess_result_path':'./output/prep_result_npz/',
 		'preprocessed_data':'./output/prep_result/*.npy',
+		'raw_data':'/home/scat5837/baidunetdiskdownload/new/',
 		'preprocessed_data_label':'./output/prep_label/*label.npy',
 		'datainfo_path':'./data_info/'},
 	'output'	:	{		
@@ -19,6 +20,7 @@ paths = {
 file_names = {
 	'data'	:	{
 		'data_hdf5_file'							: 	'data.hdf5',
+		'meta_file': 'meta.csv',
 		'patient_label'							: 	'stage1_labels.csv',
 		'IDtodict'								:	'IDtodict.pkl',
 		'Train_data_indices'						: 	'train_data_indices.pkl',
