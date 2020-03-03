@@ -77,9 +77,6 @@ USER root
 
 
 EXPOSE 8888
-<<<<<<< HEAD
 #ENTRYPOINT ["jupyter", "notebook", "--allow-root"]
 ENTRYPOINT ["bash"]
-=======
-ENTRYPOINT ["bash"]
->>>>>>> c69d239bfd753a0de10581fc1b7a0c008e54be14
+
