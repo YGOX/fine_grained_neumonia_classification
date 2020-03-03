@@ -32,6 +32,7 @@ RUN set -ex \
 
 ENV PATH /opt/miniconda/bin:$PATH
 
+RUN  apt-get update -yqq &&  apt-get install -yqq libgl1-mesa-dev
 
 RUN pip install jupyter ipdb -i  https://mirrors.aliyun.com/pypi/simple/
 
@@ -40,11 +41,41 @@ RUN  echo "10.16.91.63 github.global.ssl.fastly.Net" >> /etc/hosts
 
 RUN mkdir /app
 COPY ./requirements.txt /app
+
 RUN pip install -r /app/requirements.txt -i  https://mirrors.aliyun.com/pypi/simple/
+
+WORKDIR /app
+RUN wget https://anaconda.org/conda-forge/cairo/1.16.0/download/linux-64/cairo-1.16.0-hfb77d84_1002.tar.bz2
+RUN wget https://anaconda.org/conda-forge/opencv/4.2.0/download/linux-64/opencv-4.2.0-py38_1.tar.bz2
+
+RUN conda install --offline /app/cairo-1.16.0-hfb77d84_1002.tar.bz2
+RUN conda install --offline /app/opencv-4.2.0-py38_1.tar.bz2
+RUN rm *.bz2
+
+
+RUN conda install  -c conda-forge -y pytorch==1.3.1
+
+#RUN conda install -c conda-forge -y cairo==1.16.0
+#RUN conda install  -c conda-forge -y opencv==4.2.0
+#RUN conda install  -c conda-forge -y pytorch==1.3.1
+
+RUN conda install  -c conda-forge -y torchvision==0.4.2
+RUN conda install  -c conda-forge -y scipy==1.3.1
+RUN conda install  -c conda-forge -y pydicom==1.3.0
+RUN conda install  -c conda-forge -y matplotlib==3.1.3
+RUN conda install  -c conda-forge -y scikit-image==0.15.0
+RUN conda install  -c conda-forge -y Pillow==6.2.0
+RUN conda install  -c conda-forge -y h5py==2.10.0
+RUN conda install  -c conda-forge -y pandas==0.25.1
+RUN conda install  -c conda-forge -y numpy
+
+
+
 
 USER root
 
-WORKDIR /app
+
 
 EXPOSE 8888
-ENTRYPOINT ["jupyter", "notebook", "--allow-root"]
+#ENTRYPOINT ["jupyter", "notebook", "--allow-root"]
+ENTRYPOINT ["bash"]
