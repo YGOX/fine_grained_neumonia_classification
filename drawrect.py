@@ -169,7 +169,7 @@ def draw_patch(epoch, model, index2classlist, args, dataroot, selected_ind):
         #img_pad = transform2(img)
        # img_tensor = transform1(img)
         #img_tensor = data.unsqueeze(0)
-        out1, out2, out3, indices = model(transform2(img).unsqueeze(0))
+        out1, out2, out3, indices = model(transform2(img).unsqueeze(0).cuda())
         out = out1 + out2 + 0.1 *out3
         #img = transform1(img)
     
