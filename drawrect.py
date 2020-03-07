@@ -29,6 +29,7 @@ import os
 import re
 import numpy as np
 import cv2
+from easydict import EasyDict as edict
 def scale_width(img, target_width):
     ow, oh = img.size
     w = target_width
@@ -193,6 +194,63 @@ def draw_patch(epoch, model, index2classlist, args, dataroot, selected_ind):
         filepath = os.path.join(os.path.join(result,str(epoch)),filename)
         img.save(filepath, "PNG")
 
-    
+
+def predict_images(model, imgs, filters=3, output='./output/rep_img'):
+    import uuid
+    import matplotlib.pyplot as plt
+    images = []
+    fold = f'{output}/{uuid.uuid4()}'
+    os.makedirs(fold)
+
+    max_predict = 0
+    for sn, input_dict in enumerate(imgs):
+        input_dict = edict(input_dict)
+        #print(input_dict)
+        img = input_dict.image
+        file_name = os.path.basename((input_dict.filenane))
+        out_file = f'{fold}/{file_name}.jpg'
+        plt.imsave(out_file, img, cmap='gray')
+        img = Image.fromarray(img)
+
+        transform2 = transform_onlysize()
+
+        out1, out2, out3, indices = model(transform2(img).unsqueeze(0))
+        # TODO replace with real prediction
+        prediction = 0.88
+        # print(out1, out2, out3, indices)
+
+        out = out1 + out2 + 0.1 * out3
+        # img = transform1(img)
+
+        value, index = torch.max(out.cpu(), 1)
+        # print(out.cpu())
+        vrange = np.arange(0, filters)
+        # select from index - index+9 in 2000
+        # in test I use 1st class, so I choose indices[0, 9]
+        idx = int(index[0])
+
+        img = Image.open(out_file)
+        for i in vrange:
+            indice = indices[0, i]
+            row, col = indice / 56, indice % 56
+            p_tl = (8 * col, 8 * row)
+            p_br = (col * 8 + 92, row * 8 + 92)
+            img = img.convert('RGB')
+
+            draw = ImageDraw.Draw(img)
+            draw.rectangle((p_tl, p_br), outline='red', width=3)
+
+
+        max_predict = max(prediction, max_predict)
+        img_dict = edict()
+        img_dict.prediction = max_predict
+        img_dict.path = out_file
+        img_dict.index = input_dict['index']
+        images.append(img_dict)
+        img.save(out_file)
+    print(f'{len(images)} predict img save to :{fold}')
+    return {'prediction': max_predict, 'images': images }
+
+
 if __name__ == '__main__':
     draw_patch()

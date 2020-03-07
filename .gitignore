@@ -38,5 +38,7 @@ output
 *.log
 
 .ipynb_checkpoints
+notebook/.ipynb_checkpoints
 
 __*__
+deploy
