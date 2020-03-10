@@ -145,6 +145,9 @@ def dataLoader_lung(num_workers=1, batch_size=64, trans=None):
 
 	return (train_loader, valid_loader, test_loader)
 
+
+from functools import lru_cache
+@lru_cache()
 def count_img(input):
 	from glob import glob
 	for type_  in ['train', 'valid']:

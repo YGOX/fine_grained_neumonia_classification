@@ -80,7 +80,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch):
           'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
           'Loss1 {loss1.val:.4f} ({loss1.avg:.4f})\t'
           'Loss2 {loss2.val:.4f} ({loss2.avg:.4f})\t'
-          'Loss3 {loss3.val:.4f} ({loss3.avg:.4f})\n'
+          'Loss3 {loss3.val:.4f} ({loss3.avg:.4f})\t'
           'Accuracy {acurracy.val:.3f} ({acurracy.avg:.3f})'.format(
         # epoch, i, len(train_loader), loss=losses, loss1=losses1, loss2=losses2, loss3=losses3, top1=top1, top5=top5))
         epoch,  loss=losses, loss1=losses1, loss2=losses2, loss3=losses3, acurracy=acc))

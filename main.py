@@ -45,7 +45,7 @@ parser.add_argument('-testbatch', '--test_batch_size', default=64, type=int,
                     metavar='N', help='mini-batch size (default: 32)')
 parser.add_argument('--init_type',  default='xavier', type=str,
                     metavar='INIT',help='init net')
-parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
+parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float,
                     metavar='momentum', help='momentum')
