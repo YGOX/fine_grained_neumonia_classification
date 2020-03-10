@@ -68,6 +68,7 @@ def savenpy(id,filelist,prep_folder,data_path,use_existing=True):
             print(name+' had been done')
             return
     try:
+        #hu->gray(0-255) , m1(左), m2(right), spacing(x,y,z)
         im, m1, m2, spacing = step1_python(os.path.join(data_path,name))
         Mask = m1+m2
         
@@ -81,10 +82,13 @@ def savenpy(id,filelist,prep_folder,data_path,use_existing=True):
         extendbox = extendbox.astype('int')
 
         convex_mask = m1
+
         dm1 = process_mask(m1)
         dm2 = process_mask(m2)
         dilatedMask = dm1+dm2
         Mask = m1+m2
+
+        # 肋骨 mask
         extramask = dilatedMask ^ Mask
         bone_thresh = 210
         pad_value = 170
@@ -94,17 +98,21 @@ def savenpy(id,filelist,prep_folder,data_path,use_existing=True):
         sliceim = sliceim*dilatedMask+pad_value*(1-dilatedMask).astype('uint8')
         bones = sliceim*extramask>bone_thresh
         sliceim[bones] = pad_value
+
+        #对图片resize到1:1
         sliceim1,_ = resample(sliceim,spacing,resolution,order=1)
         sliceim2 = sliceim1[extendbox[0,0]:extendbox[0,1],
                     extendbox[1,0]:extendbox[1,1],
                     extendbox[2,0]:extendbox[2,1]]
         sliceim = sliceim2[np.newaxis,...]
+        os.makedirs(prep_folder, exist_ok=True)
+        output_file = os.path.join(prep_folder,name+'_clean')
         np.save(os.path.join(prep_folder,name+'_clean'), sliceim)
         #np.save(os.path.join(prep_folder,name+'_label'), Mask)
     except:
         print('bug in '+name)
         raise
-    print(name+' done')
+    print('save to ', output_file)
 
     
 def full_prep(data_path,prep_folder,n_worker = 8,use_existing=False):

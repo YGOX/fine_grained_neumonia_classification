@@ -72,11 +72,11 @@ def getIndicesTrainValidTest(requireslen=False):
     else:
         return train_indices, valid_indices, test_indices
 
-# Run only when new splits are to be created
-getTrainValidTestSplit(os.path.join(paths['data']['datainfo_path'], file_names['data']['data_hdf5_file']),
-                       id_file=os.path.join(paths['data']['datainfo_path'], file_names['data']['IDtodict']),
-                       shuffle=True,
-                       random_seed=200)
+# # Run only when new splits are to be created
+# getTrainValidTestSplit(os.path.join(paths['data']['datainfo_path'], file_names['data']['data_hdf5_file']),
+#                        id_file=os.path.join(paths['data']['datainfo_path'], file_names['data']['IDtodict']),
+#                        shuffle=True,
+#                        random_seed=200)
 
 
 def getTrainValidTestSplit1(label_file, id_file, shuffle, random_seed, train_size=0.8, valid_size=0.1):

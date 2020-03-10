@@ -27,7 +27,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch):
     # switch to train mode
     model.train()
 
-    for i, (data, target) in tqdm(enumerate(train_loader), desc=f'epoch:{epoch:02}', total=len(train_loader)):
+    for i, (data, target, _) in tqdm(enumerate(train_loader), desc=f'epoch:{epoch:02}', total=len(train_loader)):
         if args.gpu is not None:
             data = data.cuda()
             target = target.cuda()
@@ -63,17 +63,28 @@ def train(args, train_loader, model, criterion, optimizer, epoch):
         optimizer.step()
         
         if i % args.print_freq == 0:
-            print('DFL-CNN <==> Train Epoch: [{0}][{1}/{2}]\n'
-                'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                'Loss1 {loss1.val:.4f} ({loss1.avg:.4f})\t'
-                'Loss2 {loss2.val:.4f} ({loss2.avg:.4f})\t'
-                'Loss3 {loss3.val:.4f} ({loss3.avg:.4f})\n'
-                'Accuracy {acurracy.val:.3f} ({acurracy.avg:.3f})'.format(
-                #epoch, i, len(train_loader), loss=losses, loss1=losses1, loss2=losses2, loss3=losses3, top1=top1, top5=top5))
-                epoch, i, len(train_loader), loss=losses, loss1=losses1, loss2=losses2, loss3=losses3, acurracy=acc))
-            
+            # print('DFL-CNN <==> Train Epoch: [{0}][{1}/{2}]\n'
+            #     'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+            #     'Loss1 {loss1.val:.4f} ({loss1.avg:.4f})\t'
+            #     'Loss2 {loss2.val:.4f} ({loss2.avg:.4f})\t'
+            #     'Loss3 {loss3.val:.4f} ({loss3.avg:.4f})\n'
+            #     'Accuracy {acurracy.val:.3f} ({acurracy.avg:.3f})'.format(
+            #     #epoch, i, len(train_loader), loss=losses, loss1=losses1, loss2=losses2, loss3=losses3, top1=top1, top5=top5))
+            #     epoch, i, len(train_loader), loss=losses, loss1=losses1, loss2=losses2, loss3=losses3, acurracy=acc))
+            #
             totalloss = [losses, losses1, losses2, losses3]
             log.save_train_info(epoch, i, len(train_loader), totalloss, acc)
+        #if i >= 10: break
 
+    print('\nDFL-CNN <==> Train Epoch: [{0}]\t'
+          'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+          'Loss1 {loss1.val:.4f} ({loss1.avg:.4f})\t'
+          'Loss2 {loss2.val:.4f} ({loss2.avg:.4f})\t'
+          'Loss3 {loss3.val:.4f} ({loss3.avg:.4f})\n'
+          'Accuracy {acurracy.val:.3f} ({acurracy.avg:.3f})'.format(
+        # epoch, i, len(train_loader), loss=losses, loss1=losses1, loss2=losses2, loss3=losses3, top1=top1, top5=top5))
+        epoch,  loss=losses, loss1=losses1, loss2=losses2, loss3=losses3, acurracy=acc))
+
+    return acc.avg
 
 

@@ -55,7 +55,7 @@ class AverageMeter(object):
         self.val = val
         self.sum += val * n
         self.count += n
-        self.avg = self.sum / self.count
+        self.avg = round(float(self.sum / self.count), 4)
         
 def make_weights_for_balanced_classes(images, nclasses):
     count = [0] * nclasses

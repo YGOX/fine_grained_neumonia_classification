@@ -17,7 +17,7 @@ import torch.nn.parallel
 from dataset.splitDataset import getIndicesTrainValidTest
 from configurations.paths import paths, file_names
 from random import shuffle
-from dataset.dataLoader import dataLoader
+from dataset.dataLoader import dataLoader, dataLoader_lung
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 import torch.optim
@@ -121,14 +121,8 @@ def main():
     
 
     print('DFL-CNN <==> Part3 : Load Dataset  <==> Begin')
-    dataroot = os.path.join(paths['data']['datainfo_path'], file_names['data']['data_hdf5_file'])
-    train_indices, valid_indices, test_indices = getIndicesTrainValidTest()
-    shuffle(train_indices)
-    shuffle(valid_indices)
-    shuffle(test_indices)
-    train_loader, valid_loader, test_loader, cls_weights = \
-        dataLoader(dataroot, train_indices, valid_indices, test_indices, args.workers, batch_size=args.train_batchsize_per_gpu, trans=True)
-    #traindir = os.path.join(dataroot, 'train')
+
+    train_loader, valid_loader, test_loader = dataLoader_lung()
     #testdir = os.path.join(dataroot, 'test')
 
     # ImageFolder to process img
@@ -157,7 +151,7 @@ def main():
    
 
     print('DFL-CNN <==> Part4 : Train and Test  <==> Begin')
-    index2classlist = ['normal', 'cancer']
+    index2classlist = train_loader.dataset.index2classlist() # ['normal', 'cancer']
     selected_ind = np.sort(np.random.randint(1000, 10000, 100))
     for epoch in range(args.start_epoch, args.epochs):
         adjust_learning_rate(args, optimizer, epoch, gamma = 0.1)
@@ -182,7 +176,7 @@ def main():
 
         # do a test for visualization
         if epoch % args.vis_epoch == 0 and epoch != 0:
-            draw_patch(epoch, model, index2classlist, args, dataroot, selected_ind)
+            draw_patch(epoch, model, index2classlist, args, None, selected_ind)
 
 
 if __name__ == '__main__':

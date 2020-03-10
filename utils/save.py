@@ -40,7 +40,7 @@ class Log(object):
 
         if not os.path.exists(log_file):
             os.mknod(log_file)
-
+        os.makedirs(log_dir, exist_ok=True)
         with open(log_file, 'a') as f:
             f.write('DFL-CNN <==> Test <==> Epoch: [{:4d}] Acc:{acc.avg:.3f}% \n'.format(epoch, acc=acc))
 

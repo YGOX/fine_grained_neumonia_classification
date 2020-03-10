@@ -1,3 +1,4 @@
+from dataset.dataLoader import dataLoader_lung
 from model.DFL import DFL_VGG16
 from utils.util import *
 from utils.transform import *
@@ -143,56 +144,53 @@ def draw_patch(epoch, model, index2classlist, args, dataroot, selected_ind):
 
     index2classlist : transform predict label to specific classname
     """
-    result = os.path.abspath(args.result)
-    if not os.path.isdir(result):
-        os.mkdir(result)
-
-    f = h5py.File(dataroot, 'r', libver='latest')
-    img_f = f['image']
-    imgs= img_f[selected_ind]
-   #path_img = os.path.join(os.path.abspath('./'), 'vis_img')
-    #num_imgs = len(os.listdir(path_img))
-
-    dirs = os.path.join(result, str(epoch))
-    if not os.path.exists(dirs):
-        os.mkdir(dirs)
+    train_loader, valid_loader, test_loader = dataLoader_lung()
     
-    for ind in np.arange(100):
-        img = imgs[ind]
-        img = np.squeeze(img, axis=0)
-        img = Image.fromarray(img)
+    for img_batch, targets, paths in test_loader:
+        print(f'len_path:', len(paths))
+        for img, target, path in zip(img_batch, targets, paths):
 
-        #img_path = os.path.join(path_img, '{}.jpg'.format(original))
-        
-        #transform1 = get_transform()       # transform for predict
-        transform2 = transform_onlysize()
-        #img = Image.open(img_path)
-        #img_pad = transform2(img)
-       # img_tensor = transform1(img)
-        #img_tensor = data.unsqueeze(0)
-        out1, out2, out3, indices = model(transform2(img).unsqueeze(0).cuda())
-        out = out1 + out2 + 0.1 *out3
-        #img = transform1(img)
-    
-        value, index = torch.max(out.cpu(), 1)
-        vrange = np.arange(0, args.n_filters)
-        # select from index - index+9 in 2000
-        # in test I use 1st class, so I choose indices[0, 9]
-        idx = int(index[0])
-        for i in vrange:
-            indice = indices[0, i]
-            row, col = indice/56, indice%56
-            p_tl = (8*col, 8*row)
-            p_br = (col*8+92, row*8+92)
-            img=img.convert('RGB')
-            draw = ImageDraw.Draw(img)
-            draw.rectangle((p_tl, p_br), outline='red')
-    
-        # search corresponding classname
-        dirname = index2classlist[idx]
-        filename = 'epoch_'+'{:0>3}'.format(epoch)+'_[org]_'+str(ind)+'_[predict]_'+str(dirname)
-        filepath = os.path.join(os.path.join(result,str(epoch)),filename)
-        img.save(filepath, "PNG")
+            #img = Image.open(path)
+            # img = np.squeeze(img, axis=0)
+            # img = Image.fromarray(img.numpy())
+
+            #img_path = os.path.join(path_img, '{}.jpg'.format(original))
+
+            #transform1 = get_transform()       # transform for predict
+            #transform2 = transform_onlysize()
+            #img = Image.open(img_path)
+            #img_pad = transform2(img)
+           # img_tensor = transform1(img)
+            #img_tensor = data.unsqueeze(0)
+            out1, out2, out3, indices = model(img.unsqueeze(0))
+            out = out1 + out2 + 0.1 *out3
+            #img = transform1(img)
+
+            value, index = torch.max(out.cpu(), 1)
+            vrange = np.arange(0, args.n_filters)
+            # select from index - index+9 in 2000
+            # in test I use 1st class, so I choose indices[0, 9]
+            idx = int(index[0])
+            img = Image.open(path)
+            for i in vrange:
+                indice = indices[0, i]
+                row, col = indice/56, indice%56
+                p_tl = (8*col, 8*row)
+                p_br = (col*8+92, row*8+92)
+                img=img.convert('RGB')
+                draw = ImageDraw.Draw(img)
+                draw.rectangle((p_tl, p_br), outline='red',width=3)
+
+            # search corresponding classname
+            dirname = index2classlist[idx]
+            input_file_name = os.path.basename(path)
+            filename = 'epoch_'+'{:0>3}'.format(epoch)+'_[org]_'+str(target)+'_[predict]_'+str(dirname) + '_' + input_file_name
+            result = os.path.abspath(args.result)
+            tmp_path = f'{result}/{epoch:03}'
+            os.makedirs(tmp_path, exist_ok=True)
+            filepath = os.path.join(tmp_path,filename)
+            img.save(filepath, "PNG")
+        break
 
 
 def predict_images(model, imgs, filters=3, output='./output/rep_img'):

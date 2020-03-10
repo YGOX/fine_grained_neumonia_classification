@@ -4,6 +4,7 @@ pyTorch custom dataloader
 import h5py
 import numpy as np
 import torch
+from preprocessing.extrac_lung import lung_load_fn
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 from PIL import Image
@@ -15,6 +16,9 @@ import pandas as pd
 from dataset.splitDataset import getIndicesTrainValidTest
 import torchvision.transforms as transforms
 #import torchvision.transforms as transforms
+from torchvision import datasets
+from torchvision.datasets import ImageFolder
+
 
 class HDF5loader():
 	def __init__(self, filename, trans=None, train_indices=None):
@@ -69,6 +73,7 @@ class HDF5loader():
 		return self.cls_weights
 
 
+
 def dataLoader(hdf5_file, train_indices, valid_indices, test_indices, num_workers, batch_size, trans=None):
 
 	pin_memory = True
@@ -89,3 +94,59 @@ def dataLoader(hdf5_file, train_indices, valid_indices, test_indices, num_worker
 	
 	return (train_loader, valid_loader, test_loader, cls_weights)
 
+
+class ImageFolderWithPaths(ImageFolder):
+
+    def __getitem__(self, index):
+        original_tuple = super(ImageFolderWithPaths, self).__getitem__(index)
+
+        path = self.imgs[index][0]
+
+        tuple_with_path = (original_tuple + (path,))
+
+        return tuple_with_path
+
+    def index2classlist(self):
+        return self._find_classes_(self.root)
+
+    def _find_classes_(self, dir):
+        """
+        list : index of list coresponding to classname
+        """
+
+        classes_list = [d for d in os.listdir(dir) if os.path.isdir(os.path.join(dir, d))]
+
+        classes_list.sort()
+
+        return classes_list
+
+def dataLoader_lung(num_workers=1, batch_size=64, trans=None):
+	root = './input3'
+	count_img(root)
+	pin_memory = True
+
+	transform = transforms.Compose([transforms.Grayscale(num_output_channels=3),
+									transforms.CenterCrop((448, 448)),
+									transforms.ToTensor(),
+									transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))])
+
+	customer_loader = lung_load_fn
+
+	train_sampler = ImageFolderWithPaths(f'./{root}/train',  transform=transform)
+	valid_sampler = ImageFolderWithPaths(f'./{root}/valid',  transform=transform)
+	test_sampler = ImageFolderWithPaths(f'./{root}/valid',  transform=transform)
+
+	train_loader = DataLoader(train_sampler, batch_size=batch_size,
+							  num_workers=num_workers, pin_memory=pin_memory, shuffle=True, )
+	valid_loader = DataLoader(valid_sampler, batch_size=16,
+							  num_workers=num_workers, pin_memory=pin_memory)
+	test_loader = DataLoader(valid_sampler, batch_size=16,
+							 num_workers=num_workers, pin_memory=pin_memory, shuffle=True,)
+
+	return (train_loader, valid_loader, test_loader)
+
+def count_img(input):
+	from glob import glob
+	for type_  in ['train', 'valid']:
+		for label in ['covid', 'non-covid']:
+			print(type_, label, len(list(glob(f'{input}/{type_}/{label}/*.*'))))

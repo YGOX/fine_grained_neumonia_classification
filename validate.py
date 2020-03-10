@@ -48,7 +48,7 @@ def validate_simple(args, val_loader, model, criterion, epoch):
     end = time.time()
 
     # we may have ten d in data
-    for i, (data, target) in enumerate(val_loader):
+    for i, (data, target, _) in enumerate(val_loader):
         if args.gpu is not None:
             data = data.cuda()
             target = target.cuda()
@@ -65,9 +65,9 @@ def validate_simple(args, val_loader, model, criterion, epoch):
             #top1.update(prec1[0], 1)
             #top5.update(prec5[0], 1)
             acc.update(prec.item())
-            print('DFL-CNN <==> Test <==> Img:{} Acc {:.3f} '.format(i, prec.cpu().numpy()))
+            #print('DFL-CNN <==> Test <==> Img:{} Acc {:.3f} '.format(i, prec.cpu().numpy()))
 
-    print('DFL-CNN <==> Test Total <==> Acc {:.3f}% '.format(acc.avg))
+    print(f'DFL-CNN <==> Test Total <==> Acc {acc.avg:.3f}, epoch:{epoch:03}' )
     log.save_test_info(epoch, acc)
     return acc.avg
 
