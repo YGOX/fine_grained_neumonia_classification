@@ -42,7 +42,7 @@ class Log(object):
             os.mknod(log_file)
         os.makedirs(log_dir, exist_ok=True)
         with open(log_file, 'a') as f:
-            f.write('DFL-CNN <==> Test <==> Epoch: [{:4d}] Acc:{acc.avg:.3f}% \n'.format(epoch, acc=acc))
+            f.write('DFL-CNN <==> Test <==> Epoch: [{:4d}] Acc:{acc.avg:.3f}%'.format(epoch, acc=acc))
 
 # this is for weight
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):

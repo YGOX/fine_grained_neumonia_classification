@@ -50,9 +50,16 @@ class DFL_VGG16(nn.Module):
 		out1 = self.cls5(x_g)
 		out1 = out1.view(batchsize, -1)
 
+		mask = torch.zeros((56, 56))
+		mask[6:50, 6:50] = 1
+
 		# P-stream ,indices is for visualization
 		x_p = self.conv6(inter4)
+		#压制边框,让bbox不要一半出现在图像外面
+		#print(mask.device, out1.device, x_p.device)
+		x_p = x_p * mask.cuda()
 		x_p, indices = self.pool6(x_p)
+		box_pro = x_p.clone()
 		inter6 = x_p
 		out2 = self.cls6(x_p)
 		out2 = out2.view(batchsize, -1)
@@ -61,8 +68,11 @@ class DFL_VGG16(nn.Module):
 		inter6 = inter6.view(batchsize, -1, self.k * self.nclass)
 		out3 = self.cross_channel_pool(inter6)
 		out3 = out3.view(batchsize, -1)
+
+		#box_pro = box_pro.squeeze().view(batchsize, self.nclass, self.k, ).detach().cpu().numpy()
+		#indices = indices.squeeze().view(batchsize, self.nclass, self.k, ).detach().cpu().numpy()
 	
-		return out1, out2, out3, indices
+		return out1, out2, out3, box_pro, indices
 
 if __name__ == '__main__':
 	input_test = torch.ones(10,3,448,448)

@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- coding: utf8 -*-
+
 from dataset.dataLoader import dataLoader_lung
 from model.DFL import DFL_VGG16
 from utils.util import *
@@ -43,7 +46,7 @@ def transform_onlysize():
     transform_list = []
     #transform_list.append(transforms.Resize(224))
     transform_list.append(transforms.Grayscale(num_output_channels=3))
-    #transform_list.append(transforms.CenterCrop((224, 224)))
+    transform_list.append(transforms.CenterCrop((448, 448)))
     #transform_list.append(transforms.Pad((42, 42)))
     transform_list.append(transforms.ToTensor())
     transform_list.append(transforms.Normalize(mean=(0.5,0.5,0.5),std=(0.5,0.5,0.5)))
@@ -147,7 +150,6 @@ def draw_patch(epoch, model, index2classlist, args, dataroot, selected_ind):
     train_loader, valid_loader, test_loader = dataLoader_lung()
     
     for img_batch, targets, paths in test_loader:
-        print(f'len_path:', len(paths))
         for img, target, path in zip(img_batch, targets, paths):
 
             #img = Image.open(path)
@@ -162,7 +164,10 @@ def draw_patch(epoch, model, index2classlist, args, dataroot, selected_ind):
             #img_pad = transform2(img)
            # img_tensor = transform1(img)
             #img_tensor = data.unsqueeze(0)
-            out1, out2, out3, indices = model(img.unsqueeze(0))
+            out1, out2, out3, x_p, indices = model(img.unsqueeze(0))
+            x_p = x_p.squeeze().view(args.nclass, args.n_filters).cpu().detach().numpy()
+            indices = indices.squeeze().view(args.nclass, args.n_filters).cpu().detach().numpy()
+            #x_p, indices = x_p.reshape((args.nclass, args.n_filters)), indices.reshape(args.nclass, args.n_filters)
             out = out1 + out2 + 0.1 *out3
             #img = transform1(img)
 
@@ -172,11 +177,12 @@ def draw_patch(epoch, model, index2classlist, args, dataroot, selected_ind):
             # in test I use 1st class, so I choose indices[0, 9]
             idx = int(index[0])
             img = Image.open(path)
-            for i in vrange:
-                indice = indices[0, i]
+            for indice, pro in nms_reduce(indices[0], x_p[0]):
+                # 92为vgg指定成感受野的大小
+                gsy = 92/2
                 row, col = indice/56, indice%56
-                p_tl = (8*col, 8*row)
-                p_br = (col*8+92, row*8+92)
+                p_tl = (8*col-gsy, 8*row-gsy)
+                p_br = (col*8+gsy, row*8+gsy)
                 img=img.convert('RGB')
                 draw = ImageDraw.Draw(img)
                 draw.rectangle((p_tl, p_br), outline='red',width=3)
@@ -184,13 +190,54 @@ def draw_patch(epoch, model, index2classlist, args, dataroot, selected_ind):
             # search corresponding classname
             dirname = index2classlist[idx]
             input_file_name = os.path.basename(path)
-            filename = 'epoch_'+'{:0>3}'.format(epoch)+'_[org]_'+str(target)+'_[predict]_'+str(dirname) + '_' + input_file_name
+            filename = 'epoch_'+'{:0>3}'.format(epoch)+'_[org]_'+str(target)+'_[predict]_'+str(idx)+str(dirname)+'_'+input_file_name
             result = os.path.abspath(args.result)
             tmp_path = f'{result}/{epoch:03}'
             os.makedirs(tmp_path, exist_ok=True)
             filepath = os.path.join(tmp_path,filename)
             img.save(filepath, "PNG")
         break
+
+
+def nms_reduce(top_index, top_pro, bound=8, size=56, filter_num=3):
+    # 按照概率从小到大重排序,防止一个点有多个bbox导致小的值覆盖大的
+    tmp = sorted(zip(top_pro, top_index))
+    top_pro = [item[0] for item in tmp]
+    top_index = [item[1] for item in tmp]
+
+    fea_map = np.zeros(size * size, dtype=np.float32)
+    fea_map[top_index] = top_pro
+    #print('fea_map[top_index]', fea_map.shape, fea_map[top_index])
+
+    # print(fea_map)
+    # print(top_index, fea_map.sum())
+    fea_map = fea_map.reshape((size, size))
+    top_k_idx = (-fea_map).flatten().argsort()[0:10]
+    #print(top_k_idx)
+    top_k_idx = [item for item in top_k_idx if item in top_index]
+    #print(top_k_idx)
+    # print('top_index', top_index)
+    for n in top_k_idx:
+        # print('====', n, size, n%size)
+        row, col = n // size, n % size
+        # print('row, col',n, row, col)
+        # print(pos)
+        temp = fea_map[row, col]
+        # print('tmp', temp)
+        if temp > 0:
+            # print("Bound 0")
+            fea_map[max(row - bound, 0):min(row + bound, size), max(col - bound, 0):min(col + bound, size)] = 0
+            fea_map[row, col] = temp
+        else:
+            pass
+    # print(fea_map.sum())
+    reduce_index = (-fea_map).flatten().argsort()
+    large_then_zero = np.where(fea_map.flatten() > 0)[0]
+    # print(large_then_zero)
+    res = [item for item in reduce_index if (item in top_index and item in large_then_zero)][:3]
+    res_pro = fea_map.flatten()[res]
+    print('top_index, top_pro', top_index, top_pro, res, res_pro)
+    return list(zip(res, res_pro))
 
 
 def predict_images(model, imgs, filters=3, output='./output/rep_img'):
@@ -203,7 +250,7 @@ def predict_images(model, imgs, filters=3, output='./output/rep_img'):
     max_predict = 0
     for sn, input_dict in enumerate(imgs):
         input_dict = edict(input_dict)
-        #print(input_dict)
+        # print(input_dict)
         img = input_dict.image
         file_name = os.path.basename((input_dict.filenane))
         out_file = f'{fold}/{file_name}.jpg'
@@ -212,7 +259,12 @@ def predict_images(model, imgs, filters=3, output='./output/rep_img'):
 
         transform2 = transform_onlysize()
 
-        out1, out2, out3, indices = model(transform2(img).unsqueeze(0))
+        out1, out2, out3, x_p, indices = model(transform2(img).unsqueeze(0).cuda())
+        x_p = x_p.squeeze().view(2, filters ).cpu().detach().numpy()
+        indices = indices.squeeze().view(2, filters ).cpu().detach().numpy()
+        #x_p, indices = x_p.reshape((2,filters)), indices.reshape(2,filters)
+
+        # print('x_p.shape', x_p.shape,indices.shape, x_p)
         # TODO replace with real prediction
         prediction = 0.88
         # print(out1, out2, out3, indices)
@@ -228,16 +280,18 @@ def predict_images(model, imgs, filters=3, output='./output/rep_img'):
         idx = int(index[0])
 
         img = Image.open(out_file)
-        for i in vrange:
-            indice = indices[0, i]
+        # 92为vgg指定成感受野的大小
+        gsy = 92 / 2
+        print(indices)
+        # print('====', edict(dict(zip( indices[0], x_p[0],))))
+        for indice, pro in nms_reduce(indices[0], x_p[0]):
             row, col = indice / 56, indice % 56
-            p_tl = (8 * col, 8 * row)
-            p_br = (col * 8 + 92, row * 8 + 92)
+            p_tl = (8 * col - gsy, 8 * row - gsy)
+            p_br = (col * 8 + gsy, row * 8 + gsy)
             img = img.convert('RGB')
 
             draw = ImageDraw.Draw(img)
             draw.rectangle((p_tl, p_br), outline='red', width=3)
-
 
         max_predict = max(prediction, max_predict)
         img_dict = edict()
@@ -247,8 +301,7 @@ def predict_images(model, imgs, filters=3, output='./output/rep_img'):
         images.append(img_dict)
         img.save(out_file)
     print(f'{len(images)} predict img save to :{fold}')
-    return {'prediction': max_predict, 'images': images }
+    return edict({'prediction': max_predict, 'images': images})
 
 
-if __name__ == '__main__':
-    draw_patch()
+

@@ -32,7 +32,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch):
             data = data.cuda()
             target = target.cuda()
 
-        out1, out2, out3, _ = model(data)
+        out1, out2, out3, x_p , indices = model(data)
         out = out1 + out2 + 0.1 * out3
 
         loss1 = criterion(out1, target)

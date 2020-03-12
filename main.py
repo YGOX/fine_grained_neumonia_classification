@@ -86,13 +86,15 @@ parser.add_argument('--h', default=448, type=int,
 best_prec1 = 0
 
 def main():
-    print('DFL-CNN <==> Part1 : prepare for parameters <==> Begin')
     global args, best_prec1
     args = parser.parse_args()
+    print(edict(vars(args)))
+    print('DFL-CNN <==> Part1 : prepare for parameters <==> Begin')
+
     print('DFL-CNN <==> Part1 : prepare for parameters <==> Done')
 
     print('DFL-CNN <==> Part2 : Load Network  <==> Begin')
-    model = DFL_VGG16(k = 3, nclass = 2)
+    model = DFL_VGG16(k = args.n_filters, nclass = args.nclass)
     if args.gpu is not None:
         model = nn.DataParallel(model, device_ids=range(args.gpu))
         model = model.cuda()
@@ -152,6 +154,7 @@ def main():
 
     print('DFL-CNN <==> Part4 : Train and Test  <==> Begin')
     index2classlist = train_loader.dataset.index2classlist() # ['normal', 'cancer']
+    print('index2classlist:', index2classlist)
     selected_ind = np.sort(np.random.randint(1000, 10000, 100))
     for epoch in range(args.start_epoch, args.epochs):
         adjust_learning_rate(args, optimizer, epoch, gamma = 0.1)

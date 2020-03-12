@@ -20,8 +20,9 @@ for file in glob('./input/sample/*.*'):
 
 from model.DFL import *
 
-model = DFL_VGG16(k=3, nclass=2)
+filters=3
+model = DFL_VGG16(k=filters, nclass=2).cuda()
 
-res = predict_images(model, imgs)
+res = predict_images(model, imgs, filters=filters)
 
 print(res)
