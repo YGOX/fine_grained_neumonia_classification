@@ -4,7 +4,7 @@ pyTorch custom dataloader
 import h5py
 import numpy as np
 import torch
-from preprocessing.extrac_lung import lung_load_fn
+
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 from PIL import Image
@@ -130,7 +130,6 @@ def dataLoader_lung(num_workers=1, batch_size=64, trans=None):
 									transforms.ToTensor(),
 									transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))])
 
-	customer_loader = lung_load_fn
 
 	train_sampler = ImageFolderWithPaths(f'./{root}/train',  transform=transform)
 	valid_sampler = ImageFolderWithPaths(f'./{root}/valid',  transform=transform)

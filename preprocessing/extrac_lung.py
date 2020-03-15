@@ -10,14 +10,15 @@ import numpy as np
 import os
 from PIL import Image
 from glob import glob
-from tqdm import tqdm
+from functools import lru_cache
 
-judge_threshold = 0.1125
+from tqdm import tqdm
+import pydicom
 
 
 def get_segmented_lungs(img_dir,  # s1_path, s2_path, s3_path,
                         plot=False, min_lung_area=4000, padding_num=0,
-                        mean_begin=60, mean_end =160, raise_exception=False
+                        mean_begin=20, mean_end=200, judge_threshold=0.001, raise_exception=False
                         ):
     """
     :param img_dir: 输入图片路径
@@ -29,19 +30,25 @@ def get_segmented_lungs(img_dir,  # s1_path, s2_path, s3_path,
     :param padding_num: 截取部分需要padding的大小
     :return: True or False (img is useful or not)
     """
-    src_img = cv2.imread(img_dir)
+    if isinstance(img_dir, str):
+        src_img = cv2.imread(img_dir)
+        img = Image.open(img_dir)
+    else:
+        src_img = img_dir
+        img = Image.fromarray(img_dir.squeeze())
+    assert len(src_img.shape) == 3, f'Current shape:{src_img.shape}'
     src_img1 = src_img.copy()
-    img = Image.open(img_dir)
+    img = img.convert('RGB')
     img = np.array(img)[:, :, 0]
     img = img.astype(np.int16)
 
-    #print(img.shape)
+    # print(img.shape)
     if img.mean() < mean_begin or img.mean() > mean_end:
-        print(f'Warning: img.mean()={img.mean()}, not between {mean_begin}, {mean_end}, img:{img_dir}')
+        print(f'Warning: img.mean()={img.mean()}, not between {mean_begin}, {mean_end} ')
         if raise_exception:
-            raise Exception(f'img.mean()={img.mean()}, not between {mean_begin}, {mean_end}, img:{img_dir}')
+            raise Exception(f'img.mean()={img.mean()}, not between {mean_begin}, {mean_end}')
         else:
-            return src_img, src_img
+            return src_img, src_img, 1, 255
     img = img * 3
     img -= 1000
     im = img.copy()
@@ -53,7 +60,12 @@ def get_segmented_lungs(img_dir,  # s1_path, s2_path, s3_path,
     '''
     Step 1: Convert into a binary image. 
     '''
-    binary = im < -600
+
+    thresold_binary = min(-600, np.median(im) + 200)
+    # print('mean', np.mean(im), np.std(im), np.median(im), thresold_binary)
+
+    # 数字越小,去除的白色越多
+    binary = im < thresold_binary
     if plot == True:
         plots[0].axis('off')
         plots[0].imshow(binary, cmap=plt.cm.bone)
@@ -129,11 +141,12 @@ def get_segmented_lungs(img_dir,  # s1_path, s2_path, s3_path,
     # plt.show()
 
     if mask.mean() < judge_threshold or mask_img.mean() < 6:
-        print(f'Warning: mask.mean={mask.mean()}, not between {judge_threshold} and 6, img={img_dir}')
+
+        print(f'Warning: mask.mean={mask.mean()}, not between {judge_threshold} and 6,  ')
         if raise_exception:
-            raise Exception(f'mask.mean={mask.mean()}, not between {judge_threshold} and 6, img={img_dir}')
+            raise Exception(f'mask.mean={mask.mean()}, not between {judge_threshold} and 6, ')
         else:
-            return src_img, src_img
+            return src_img, src_img, 1, 255
     # 找出包围肺部的最小有效矩形
     gray = cv2.cvtColor(mask_img, cv2.COLOR_BGR2GRAY)
     ret, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -180,14 +193,18 @@ def get_segmented_lungs(img_dir,  # s1_path, s2_path, s3_path,
     # plt.figure(figsize=(12, 12))
     # plt.imshow(background)
     # plt.show()
-    return final_img, final_crop
+    cut_per = (final_img.shape[0] * final_img.shape[1]) / (src_img.shape[0] * src_img.shape[1])
+
+    img_mean = np.mean(final_img[:, :, 0])
+    print(f'cut {cut_per:.2f}, mean:{img_mean}, from {final_img.shape}')
+    return final_img, final_crop, cut_per, img_mean
 
 
-def lung_load_fn(path):
-    final_img, final_crop = get_segmented_lungs(path,False, mean_begin=0, mean_end =255)
-    #print(type(final_img), path)
-    final_img = Image.fromarray(final_img)
-    return final_img
+# def lung_load_fn(path):
+#     final_img, final_crop, _ = get_segmented_lungs(path,False, mean_begin=0, mean_end =255)
+#     #print(type(final_img), path)
+#     final_img = Image.fromarray(final_img)
+#     return final_img
 
 # =============================================================================
 #     shutil.copy(img_dir, s1_path)
@@ -231,30 +248,69 @@ def cut_siglefile(file, input, output, reuse=True):
         outfile = file.replace(input, output)
         if os.path.exists(outfile) and reuse:
             return True
-        img, _ = get_segmented_lungs(file, False, mean_begin=60, mean_end=160, raise_exception=True)
 
+        npz_obj = np.load(file)
+        npz_array = npz_obj.f.arr_0
         os.makedirs(os.path.dirname(outfile), exist_ok=True)
-        img = cv2.resize(img, (448, 448) )
-        print(f'File save to:{file}')
-        plt.imsave(outfile, img)
-        return True
+        for sn, slice in enumerate(npz_array):
+            png = dicom2png(slice)
+            png = hist_match(png)
+
+            img, _, per, img_avg = get_segmented_lungs(png, False)
+            if 0.2 <= per <= 0.5 and img_avg > 35:
+                img = cv2.resize(img, (448, 448))
+                print(f'File save to:{outfile}')
+                plt.imsave(f'{outfile}_{npz_array.shape[0]:03}_{sn:03}_{per:.2f}_{int(img_avg)}.png', img)
+
     except Exception as e:
         print(e)
 
 
-def cut(input='/share/data1/lung_img', output='/share/data1/lung_img_output', reuse = True):
+def cut(input='/share/data/lung/lung_ct_npy_v2', output='/share/data1/lung/lung_img_output_v2', reuse = True):
     from functools import partial
     tmp_fn = partial(cut_siglefile, input=input, output=output, reuse = reuse)
     from multiprocessing import Pool
-    todo = tqdm(glob(f'{input}/**/*.png', recursive=True))
-    Pool(5).map(tmp_fn, todo)
+    todo = tqdm(glob(f'{input}/**/*.npz', recursive=True))
+
+    Pool(10).map(tmp_fn, todo)
 
 
+def dicom2png(input, pixel_range=3000):
+    if isinstance(input, str):
+        ds = pydicom.dcmread(input, force=True)
+        ds.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
+        img = ds.pixel_array
+    else:
+        img = input
+    img = img.clip(img.max() - pixel_range, img.max())
+    img = img - img.min()
+    img = (np.maximum(img, 0) / img.max()) * 255.0
+    img = img.astype(np.uint8)
+    img = Image.fromarray(img)
+    img = img.convert('RGB')
+    return np.array(img)
 
 
+@lru_cache()
+def get_ref(index):
+    path = list(glob('./input/**/*.jpg'))[index]
+    refer = cv2.imread(path)
+    return refer
+
+
+def hist_match(image, image_index=0):
+
+    from skimage import data
+    from skimage import exposure
+    from skimage.exposure import match_histograms
+    reference = get_ref(image_index)
+    matched = match_histograms(image, reference, multichannel=True)
+    return matched
 
 if __name__ == '__main__':
     """"
     nohup python -u  preprocessing/extrac_lung.py >> cut.log 2>&1 & 
     """
     cut(reuse=False)
+
+

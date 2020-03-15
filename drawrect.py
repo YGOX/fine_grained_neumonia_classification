@@ -34,6 +34,8 @@ import re
 import numpy as np
 import cv2
 from easydict import EasyDict as edict
+from preprocessing.extrac_lung import get_segmented_lungs
+
 def scale_width(img, target_width):
     ow, oh = img.size
     w = target_width
@@ -137,6 +139,46 @@ def get_transform():
     
     return transforms.Compose(transform_list)
 
+def nms_reduce(top_index, top_pro, bound=8, size=56, filter_num=3):
+    # 按照概率从小到大重排序,防止一个点有多个bbox导致小的值覆盖大的
+    tmp = sorted(zip(top_pro, top_index))
+    top_pro = [item[0] for item in tmp]
+    top_index = [item[1] for item in tmp]
+
+    fea_map = np.zeros(size * size, dtype=np.float32)
+    fea_map[top_index] = top_pro
+    #print('fea_map[top_index]', fea_map.shape, fea_map[top_index])
+
+    # print(fea_map)
+    # print(top_index, fea_map.sum())
+    fea_map = fea_map.reshape((size, size))
+    top_k_idx = (-fea_map).flatten().argsort()[0:10]
+    #print(top_k_idx)
+    top_k_idx = [item for item in top_k_idx if item in top_index]
+    #print(top_k_idx)
+    # print('top_index', top_index)
+    for n in top_k_idx:
+        # print('====', n, size, n%size)
+        row, col = n // size, n % size
+        # print('row, col',n, row, col)
+        # print(pos)
+        temp = fea_map[row, col]
+        # print('tmp', temp)
+        if temp > 0:
+            # print("Bound 0")
+            fea_map[max(row - bound, 0):min(row + bound, size), max(col - bound, 0):min(col + bound, size)] = 0
+            fea_map[row, col] = temp
+        else:
+            pass
+    # print(fea_map.sum())
+    reduce_index = (-fea_map).flatten().argsort()
+    large_then_zero = np.where(fea_map.flatten() > 0)[0]
+    # print(large_then_zero)
+    res = [item for item in reduce_index if (item in top_index and item in large_then_zero)][:3]
+    res_pro = fea_map.flatten()[res]
+    #print('top_index, top_pro', top_index, top_pro, res, res_pro)
+    return list(zip(res, res_pro))
+
 
 def draw_patch(epoch, model, index2classlist, args, dataroot, selected_ind):
     """Implement: use model to predict images and draw ten boxes by POOL6
@@ -186,7 +228,10 @@ def draw_patch(epoch, model, index2classlist, args, dataroot, selected_ind):
                 img=img.convert('RGB')
                 draw = ImageDraw.Draw(img)
                 draw.rectangle((p_tl, p_br), outline='red',width=3)
-
+                pro = str(round(pro, 2))
+                font = ImageFont.truetype('/usr/share/fonts/truetype/freefont/FreeMono.ttf', size=32)
+                p_br = p_br[0] - 85, p_br[1] - 30
+                draw.text(p_br, pro, font=font, fill='red')
             # search corresponding classname
             dirname = index2classlist[idx]
             input_file_name = os.path.basename(path)
@@ -198,49 +243,11 @@ def draw_patch(epoch, model, index2classlist, args, dataroot, selected_ind):
             img.save(filepath, "PNG")
         break
 
+def sigmoid(x):
+    import math
+    return 1 / (1 + math.exp(-x))
 
-def nms_reduce(top_index, top_pro, bound=8, size=56, filter_num=3):
-    # 按照概率从小到大重排序,防止一个点有多个bbox导致小的值覆盖大的
-    tmp = sorted(zip(top_pro, top_index))
-    top_pro = [item[0] for item in tmp]
-    top_index = [item[1] for item in tmp]
-
-    fea_map = np.zeros(size * size, dtype=np.float32)
-    fea_map[top_index] = top_pro
-    #print('fea_map[top_index]', fea_map.shape, fea_map[top_index])
-
-    # print(fea_map)
-    # print(top_index, fea_map.sum())
-    fea_map = fea_map.reshape((size, size))
-    top_k_idx = (-fea_map).flatten().argsort()[0:10]
-    #print(top_k_idx)
-    top_k_idx = [item for item in top_k_idx if item in top_index]
-    #print(top_k_idx)
-    # print('top_index', top_index)
-    for n in top_k_idx:
-        # print('====', n, size, n%size)
-        row, col = n // size, n % size
-        # print('row, col',n, row, col)
-        # print(pos)
-        temp = fea_map[row, col]
-        # print('tmp', temp)
-        if temp > 0:
-            # print("Bound 0")
-            fea_map[max(row - bound, 0):min(row + bound, size), max(col - bound, 0):min(col + bound, size)] = 0
-            fea_map[row, col] = temp
-        else:
-            pass
-    # print(fea_map.sum())
-    reduce_index = (-fea_map).flatten().argsort()
-    large_then_zero = np.where(fea_map.flatten() > 0)[0]
-    # print(large_then_zero)
-    res = [item for item in reduce_index if (item in top_index and item in large_then_zero)][:3]
-    res_pro = fea_map.flatten()[res]
-    print('top_index, top_pro', top_index, top_pro, res, res_pro)
-    return list(zip(res, res_pro))
-
-
-def predict_images(model, imgs, filters=3, output='./output/rep_img'):
+def predict_images(model, imgs, filters=5, output='./output/rep_img', threshold=0.6):
     import uuid
     import matplotlib.pyplot as plt
     images = []
@@ -252,6 +259,10 @@ def predict_images(model, imgs, filters=3, output='./output/rep_img'):
         input_dict = edict(input_dict)
         # print(input_dict)
         img = input_dict.image
+        img, _, per = get_segmented_lungs(img)
+        if per <0.2 or per >0.5:
+            continue
+        lung_img = img.copy()
         file_name = os.path.basename((input_dict.filenane))
         out_file = f'{fold}/{file_name}.jpg'
         plt.imsave(out_file, img, cmap='gray')
@@ -260,9 +271,9 @@ def predict_images(model, imgs, filters=3, output='./output/rep_img'):
         transform2 = transform_onlysize()
 
         out1, out2, out3, x_p, indices = model(transform2(img).unsqueeze(0).cuda())
-        x_p = x_p.squeeze().view(2, filters ).cpu().detach().numpy()
-        indices = indices.squeeze().view(2, filters ).cpu().detach().numpy()
-        #x_p, indices = x_p.reshape((2,filters)), indices.reshape(2,filters)
+        x_p = x_p.squeeze().view(2, filters).cpu().detach().numpy()
+        indices = indices.squeeze().view(2, filters).cpu().detach().numpy()
+        # x_p, indices = x_p.reshape((2,filters)), indices.reshape(2,filters)
 
         # print('x_p.shape', x_p.shape,indices.shape, x_p)
         # TODO replace with real prediction
@@ -279,29 +290,39 @@ def predict_images(model, imgs, filters=3, output='./output/rep_img'):
         # in test I use 1st class, so I choose indices[0, 9]
         idx = int(index[0])
 
-        img = Image.open(out_file)
+        lung_img = cv2.resize(lung_img, (448,448))
+        print(lung_img.shape)
+        lung_img = Image.fromarray(lung_img)
         # 92为vgg指定成感受野的大小
         gsy = 92 / 2
         print(indices)
         # print('====', edict(dict(zip( indices[0], x_p[0],))))
+        max_pro_sing_file = 0
         for indice, pro in nms_reduce(indices[0], x_p[0]):
+            max_pro_sing_file = max(max_pro_sing_file, sigmoid(pro))
+            # if sigmoid(pro) < threshold:
+            #     continue
             row, col = indice / 56, indice % 56
             p_tl = (8 * col - gsy, 8 * row - gsy)
             p_br = (col * 8 + gsy, row * 8 + gsy)
-            img = img.convert('RGB')
+            lung_img = lung_img.convert('RGB')
 
-            draw = ImageDraw.Draw(img)
+            draw = ImageDraw.Draw(lung_img)
             draw.rectangle((p_tl, p_br), outline='red', width=3)
+            pro = str(round(pro, 2))
+            font = ImageFont.truetype('./input/FreeMono.ttf', size=32)
+            p_br = p_br[0] - 85, p_br[1] - 30
+            draw.text(p_br, pro, font=font, fill='red')
 
-        max_predict = max(prediction, max_predict)
-        img_dict = edict()
-        img_dict.prediction = max_predict
-        img_dict.path = out_file
-        img_dict.index = input_dict['index']
-        images.append(img_dict)
-        img.save(out_file)
+        cur_pro = sigmoid(max_pro_sing_file)
+        max_predict = max(max_predict, cur_pro)
+
+        input_dict.pop('image')
+        input_dict.prediction = cur_pro
+        input_dict.path = out_file
+        images.append(input_dict)
+        lung_img.save(out_file)
+
     print(f'{len(images)} predict img save to :{fold}')
     return edict({'prediction': max_predict, 'images': images})
-
-
 
