@@ -270,6 +270,7 @@ def predict_images(model, imgs, filters=5, output='./output/rep_img', threshold=
             lung_img = img.copy()
             file_name = os.path.basename((input_dict.filenane))
             out_file = f'{fold}/{file_name}.jpg'
+            out_file = out_file.replace(' ', '')
             plt.imsave(out_file, img, cmap='gray')
             img = Image.fromarray(img)
 
@@ -322,11 +323,11 @@ def predict_images(model, imgs, filters=5, output='./output/rep_img', threshold=
             patient_predict = max(patient_predict, cls_pro)
 
             input_dict.pop('image')
-            input_dict.prediction = str(cls_pro)
+            input_dict.prediction = float(cls_pro)
             input_dict.path = out_file
             images.append(input_dict)
             lung_img.save(out_file)
-    images = sorted(images, key=lambda item:item.prediction, reverse=True)[:5]
+    images = sorted(images, key=lambda item:item.prediction, reverse=True)[:500]
     print(f'{len(images)} predict img save to :{fold}')
-    return edict({'prediction': str(patient_predict), 'images': images})
+    return edict({'prediction': float(patient_predict), 'images': images})
 
