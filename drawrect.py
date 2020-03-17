@@ -139,6 +139,14 @@ def get_transform():
     
     return transforms.Compose(transform_list)
 
+
+def not_bounding(indice):
+    row, col = indice / 56, indice % 56
+    if 6 <= row <= 50 and 6 <= col <= 50:
+        return True
+    else:
+        return False
+
 def nms_reduce(top_index, top_pro, bound=8, size=56, filter_num=3):
     # 按照概率从小到大重排序,防止一个点有多个bbox导致小的值覆盖大的
     tmp = sorted(zip(top_pro, top_index))
@@ -174,7 +182,7 @@ def nms_reduce(top_index, top_pro, bound=8, size=56, filter_num=3):
     reduce_index = (-fea_map).flatten().argsort()
     large_then_zero = np.where(fea_map.flatten() > 0)[0]
     # print(large_then_zero)
-    res = [item for item in reduce_index if (item in top_index and item in large_then_zero)][:3]
+    res = [item for item in reduce_index if (item in top_index and item in large_then_zero and not_bounding(item))][:3]
     res_pro = fea_map.flatten()[res]
     #print('top_index, top_pro', top_index, top_pro, res, res_pro)
     return list(zip(res, res_pro))
@@ -223,15 +231,16 @@ def draw_patch(epoch, model, index2classlist, args, dataroot, selected_ind):
                 # 92为vgg指定成感受野的大小
                 gsy = 92/2
                 row, col = indice/56, indice%56
-                p_tl = (8*col-gsy, 8*row-gsy)
-                p_br = (col*8+gsy, row*8+gsy)
-                img=img.convert('RGB')
-                draw = ImageDraw.Draw(img)
-                draw.rectangle((p_tl, p_br), outline='red',width=3)
-                pro = str(round(pro, 2))
-                font = ImageFont.truetype('/usr/share/fonts/truetype/freefont/FreeMono.ttf', size=32)
-                p_br = p_br[0] - 85, p_br[1] - 30
-                draw.text(p_br, pro, font=font, fill='red')
+                if 6 <= row <= 6 and 6 <= col <= 50:
+                    p_tl = (8*col-gsy, 8*row-gsy)
+                    p_br = (col*8+gsy, row*8+gsy)
+                    img=img.convert('RGB')
+                    draw = ImageDraw.Draw(img)
+                    draw.rectangle((p_tl, p_br), outline='red',width=3)
+                    pro = str(round(pro, 2))
+                    font = ImageFont.truetype('/usr/share/fonts/truetype/freefont/FreeMono.ttf', size=32)
+                    p_br = p_br[0] - 85, p_br[1] - 30
+                    draw.text(p_br, pro, font=font, fill='red')
             # search corresponding classname
             dirname = index2classlist[idx]
             input_file_name = os.path.basename(path)
@@ -243,9 +252,6 @@ def draw_patch(epoch, model, index2classlist, args, dataroot, selected_ind):
             img.save(filepath, "PNG")
         break
 
-def sigmoid(x):
-    import math
-    return 1 / (1 + math.exp(-x))
 
 def predict_images(model, imgs, filters=5, output='./output/rep_img', threshold=0.6):
     import uuid
@@ -254,75 +260,73 @@ def predict_images(model, imgs, filters=5, output='./output/rep_img', threshold=
     fold = f'{output}/{uuid.uuid4()}'
     os.makedirs(fold)
 
-    max_predict = 0
+    patient_predict = 0
     for sn, input_dict in enumerate(imgs):
         input_dict = edict(input_dict)
         # print(input_dict)
         img = input_dict.image
-        img, _, per = get_segmented_lungs(img)
-        if per <0.2 or per >0.5:
-            continue
-        lung_img = img.copy()
-        file_name = os.path.basename((input_dict.filenane))
-        out_file = f'{fold}/{file_name}.jpg'
-        plt.imsave(out_file, img, cmap='gray')
-        img = Image.fromarray(img)
+        img, _, per, img_avg = get_segmented_lungs(img)
+        if 0.15 <= per <= 0.5 and 10 < img_avg < 80:
+            lung_img = img.copy()
+            file_name = os.path.basename((input_dict.filenane))
+            out_file = f'{fold}/{file_name}.jpg'
+            plt.imsave(out_file, img, cmap='gray')
+            img = Image.fromarray(img)
 
-        transform2 = transform_onlysize()
+            transform2 = transform_onlysize()
 
-        out1, out2, out3, x_p, indices = model(transform2(img).unsqueeze(0).cuda())
-        x_p = x_p.squeeze().view(2, filters).cpu().detach().numpy()
-        indices = indices.squeeze().view(2, filters).cpu().detach().numpy()
-        # x_p, indices = x_p.reshape((2,filters)), indices.reshape(2,filters)
+            out1, out2, out3, x_p, indices = model(transform2(img).unsqueeze(0).cuda())
+            x_p = x_p.squeeze().view(2, filters).cpu().detach().numpy()
+            indices = indices.squeeze().view(2, filters).cpu().detach().numpy()
+            # x_p, indices = x_p.reshape((2,filters)), indices.reshape(2,filters)
 
-        # print('x_p.shape', x_p.shape,indices.shape, x_p)
-        # TODO replace with real prediction
-        prediction = 0.88
-        # print(out1, out2, out3, indices)
+            out = out1 + out2 + 0.1 * out3
 
-        out = out1 + out2 + 0.1 * out3
-        # img = transform1(img)
+            cls_pro = torch.nn.Softmax(1)(out.cpu().detach()).numpy()[0][0]
 
-        value, index = torch.max(out.cpu(), 1)
-        # print(out.cpu())
-        vrange = np.arange(0, filters)
-        # select from index - index+9 in 2000
-        # in test I use 1st class, so I choose indices[0, 9]
-        idx = int(index[0])
+            #print('out, cls_pro', out, cls_pro)
 
-        lung_img = cv2.resize(lung_img, (448,448))
-        print(lung_img.shape)
-        lung_img = Image.fromarray(lung_img)
-        # 92为vgg指定成感受野的大小
-        gsy = 92 / 2
-        print(indices)
-        # print('====', edict(dict(zip( indices[0], x_p[0],))))
-        max_pro_sing_file = 0
-        for indice, pro in nms_reduce(indices[0], x_p[0]):
-            max_pro_sing_file = max(max_pro_sing_file, sigmoid(pro))
-            # if sigmoid(pro) < threshold:
-            #     continue
-            row, col = indice / 56, indice % 56
-            p_tl = (8 * col - gsy, 8 * row - gsy)
-            p_br = (col * 8 + gsy, row * 8 + gsy)
-            lung_img = lung_img.convert('RGB')
+            value, index = torch.max(out.cpu(), 1)
+            # print(out.cpu())
+            vrange = np.arange(0, filters)
+            # select from index - index+9 in 2000
+            # in test I use 1st class, so I choose indices[0, 9]
+            idx = int(index[0])
 
-            draw = ImageDraw.Draw(lung_img)
-            draw.rectangle((p_tl, p_br), outline='red', width=3)
-            pro = str(round(pro, 2))
-            font = ImageFont.truetype('./input/FreeMono.ttf', size=32)
-            p_br = p_br[0] - 85, p_br[1] - 30
-            draw.text(p_br, pro, font=font, fill='red')
+            lung_img = cv2.resize(lung_img, (448,448))
+            #print('lung_img.shape', lung_img.shape)
+            lung_img = Image.fromarray(lung_img)
+            # 92为vgg指定成感受野的大小
+            gsy = 92 / 2
+            #print(indices)
+            # print('====', edict(dict(zip( indices[0], x_p[0],))))
+            #print('x_p', x_p)
+            x_p = torch.nn.Softmax(0)(torch.Tensor(x_p)).numpy()
+            for indice, pro_box in nms_reduce(indices[0], x_p[0]):
+                #如果文件分类阳性过低,不画bbox
+                if cls_pro < 0.3 : break
+                row, col = indice / 56, indice % 56
+                p_tl = (8 * col - gsy, 8 * row - gsy)
+                p_br = (col * 8 + gsy, row * 8 + gsy)
+                lung_img = lung_img.convert('RGB')
 
-        cur_pro = sigmoid(max_pro_sing_file)
-        max_predict = max(max_predict, cur_pro)
+                draw = ImageDraw.Draw(lung_img)
+                draw.rectangle((p_tl, p_br), outline='red', width=3)
+                # pro_box = str(round(pro_box, 2))
+                # font = ImageFont.truetype('./input/FreeMono.ttf', size=32)
+                # p_br = p_br[0] - 85, p_br[1] - 30
+                #draw.text(p_br, pro_box, font=font, fill='red')
 
-        input_dict.pop('image')
-        input_dict.prediction = cur_pro
-        input_dict.path = out_file
-        images.append(input_dict)
-        lung_img.save(out_file)
 
+            #patient_predict = max(patient_predict, cur_file_pro)
+            patient_predict = max(patient_predict, cls_pro)
+
+            input_dict.pop('image')
+            input_dict.prediction = str(cls_pro)
+            input_dict.path = out_file
+            images.append(input_dict)
+            lung_img.save(out_file)
+    images = sorted(images, key=lambda item:item.prediction, reverse=True)[:5]
     print(f'{len(images)} predict img save to :{fold}')
-    return edict({'prediction': max_predict, 'images': images})
+    return edict({'prediction': str(patient_predict), 'images': images})
 

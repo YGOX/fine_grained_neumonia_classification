@@ -27,7 +27,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch):
     # switch to train mode
     model.train()
 
-    for i, (data, target, _) in tqdm(enumerate(train_loader), desc=f'epoch:{epoch:02}', total=len(train_loader)):
+    for i, (data, target, _) in tqdm(enumerate(train_loader), desc=f'Train epoch:{epoch:02}', total=len(train_loader)):
         if args.gpu is not None:
             data = data.cuda()
             target = target.cuda()

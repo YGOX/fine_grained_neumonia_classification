@@ -87,9 +87,9 @@ def dataLoader(hdf5_file, train_indices, valid_indices, test_indices, num_worker
 
 	train_loader = DataLoader(data, batch_size=batch_size, sampler=train_sampler,
 							  num_workers=num_workers, pin_memory=pin_memory)
-	valid_loader = DataLoader(data, batch_size=1, sampler=valid_sampler,
+	valid_loader = DataLoader(data, batch_size=batch_size, sampler=valid_sampler,
 							  num_workers=num_workers, pin_memory=pin_memory)
-	test_loader = DataLoader(data, batch_size=1, sampler=test_sampler,
+	test_loader = DataLoader(data, batch_size=batch_size, sampler=test_sampler,
 							 num_workers=num_workers, pin_memory=pin_memory)
 	
 	return (train_loader, valid_loader, test_loader, cls_weights)
@@ -121,7 +121,7 @@ class ImageFolderWithPaths(ImageFolder):
         return classes_list
 
 def dataLoader_lung(num_workers=1, batch_size=64, trans=None):
-	root = './input3'
+	root = './input4'
 	count_img(root)
 	pin_memory = True
 
@@ -131,9 +131,9 @@ def dataLoader_lung(num_workers=1, batch_size=64, trans=None):
 									transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))])
 
 
-	train_sampler = ImageFolderWithPaths(f'./{root}/train',  transform=transform)
-	valid_sampler = ImageFolderWithPaths(f'./{root}/valid',  transform=transform)
-	test_sampler = ImageFolderWithPaths(f'./{root}/valid',  transform=transform)
+	train_sampler = ImageFolderWithPaths(f'{root}/train',  transform=transform)
+	valid_sampler = ImageFolderWithPaths(f'{root}/valid',  transform=transform)
+	test_sampler =  ImageFolderWithPaths(f'{root}/valid',  transform=transform)
 
 	train_loader = DataLoader(train_sampler, batch_size=batch_size,
 							  num_workers=num_workers, pin_memory=pin_memory, shuffle=True, )
@@ -149,6 +149,6 @@ from functools import lru_cache
 @lru_cache()
 def count_img(input):
 	from glob import glob
-	for type_  in ['train', 'valid']:
-		for label in ['covid', 'non-covid']:
+	for type_ in ['train', 'valid']:
+		for label in ['covid', 'normal', 'pneumonia']:
 			print(type_, label, len(list(glob(f'{input}/{type_}/{label}/*.*'))))

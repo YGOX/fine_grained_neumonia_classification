@@ -257,7 +257,7 @@ def cut_siglefile(file, input, output, reuse=True):
             png = hist_match(png)
 
             img, _, per, img_avg = get_segmented_lungs(png, False)
-            if 0.2 <= per <= 0.5 and img_avg > 35:
+            if 0.2 <= per <= 0.5 and 35 < img_avg < 80 :
                 img = cv2.resize(img, (448, 448))
                 print(f'File save to:{outfile}')
                 plt.imsave(f'{outfile}_{npz_array.shape[0]:03}_{sn:03}_{per:.2f}_{int(img_avg)}.png', img)
@@ -277,9 +277,13 @@ def cut(input='/share/data/lung/lung_ct_npy_v2', output='/share/data1/lung/lung_
 
 def dicom2png(input, pixel_range=3000):
     if isinstance(input, str):
-        ds = pydicom.dcmread(input, force=True)
-        ds.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
-        img = ds.pixel_array
+        try:
+            ds = pydicom.dcmread(input, force=True)
+            ds.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
+            img = ds.pixel_array
+        except ValueError as e:
+            ds = pydicom.dcmread(input, force=True)
+            img = ds.pixel_array
     else:
         img = input
     img = img.clip(img.max() - pixel_range, img.max())
@@ -307,10 +311,65 @@ def hist_match(image, image_index=0):
     matched = match_histograms(image, reference, multichannel=True)
     return matched
 
+
+@lru_cache()
+def get_type(path):
+    if '/新冠/' in path or '儿童' in path:
+        type_ = 'covid'
+    elif '/非新冠/' in path or '/非肺炎/' in path:
+        type_ = 'normal'
+    elif '/肺炎/' in path:
+        type_ = 'pneumonia'
+    else:
+        raise Exception(f'Unknown path:{path}')
+    # print(type_, path)
+    return type_
+
+
+def merge_1_fold(input_fold, output_fold):
+    fold_normal_list = []
+    fold_pneumonia_list = []
+    fold_covid_list = []
+
+    list_png = glob(f'{input_fold}/**/**/*.png', recursive=True)
+    print(len(list_png))
+    list_dir = [os.path.dirname(file) for file in list_png]
+    list_dir = list(set(list_dir))
+    print(len(list_dir))
+    for folder in tqdm(list_dir):
+        type_ = get_type(folder)
+        if type_ == 'normal':
+            fold_normal_list.append(folder)
+        elif type_ == 'pneumonia':
+            fold_pneumonia_list.append(folder)
+        elif type_ == 'covid':
+            fold_covid_list.append(folder)
+        else:
+            raise Exception(f'Unknown path:{folder}')
+    print('len of kinds list', len(fold_normal_list), len(fold_pneumonia_list), len(fold_covid_list))
+
+    for list_obj in [fold_normal_list, fold_pneumonia_list, fold_covid_list]:
+
+        for sn, path in tqdm(enumerate(list_obj)):
+            split = 'train' if sn % 2 == 0 else 'valid'
+            type_ = get_type(path)
+            os.makedirs(f'{output_fold}/{split}/{type_}', exist_ok=True)
+            cmd = f'cp -r {path}/*.png {output_fold}/{split}/{type_}'
+            # print(cmd)
+            os.system(cmd)
+
+    return fold_normal_list, fold_pneumonia_list, fold_covid_list
+
+
 if __name__ == '__main__':
     """"
     nohup python -u  preprocessing/extrac_lung.py >> cut.log 2>&1 & 
     """
     cut(reuse=False)
+
+    input_fold = '/share/data1/lung/lung_img_output_v2'
+    output_fold = '/share/data1/lung/lung_img_output_v3'
+    fold_normal_list, fold_pneumonia_list, fold_covid_list = merge_1_fold(input_fold, output_fold)
+
 
 

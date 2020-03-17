@@ -3,6 +3,7 @@ import time
 import sys
 from utils.util import *
 from utils.save import *
+from tqdm import tqdm
 
 def validate(args, val_loader, model, criterion, epoch):
     batch_time = AverageMeter()
@@ -48,7 +49,7 @@ def validate_simple(args, val_loader, model, criterion, epoch):
     end = time.time()
 
     # we may have ten d in data
-    for i, (data, target, _) in enumerate(val_loader):
+    for i, (data, target, _) in tqdm(enumerate(val_loader), desc=f'Valid epoch:{epoch}', total=len(val_loader)):
         if args.gpu is not None:
             data = data.cuda()
             target = target.cuda()
@@ -67,7 +68,7 @@ def validate_simple(args, val_loader, model, criterion, epoch):
             acc.update(prec.item())
             #print('DFL-CNN <==> Test <==> Img:{} Acc {:.3f} '.format(i, prec.cpu().numpy()))
 
-    print(f'DFL-CNN <==> Test Total <==> Acc {acc.avg:.3f}, epoch:{epoch:03}' )
+    print(f'\nDFL-CNN <==> Test Total <==> Acc {acc.avg:.3f}, epoch:{epoch:03}' )
     log.save_test_info(epoch, acc)
     return acc.avg
 
